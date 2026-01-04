@@ -1,0 +1,6 @@
+build/
+*.o
+*.wasm
+*.elf
+*.bin
+.DS_Store
