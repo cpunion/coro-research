@@ -67,7 +67,7 @@ riscv: $(BUILD)/riscv_test.elf
 	@echo "========================================"
 	@echo "RISC-V (QEMU virt)"
 	@echo "========================================"
-	@timeout 5 qemu-system-riscv32 -M virt -nographic -bios none -kernel $< 2>/dev/null || true
+	qemu-system-riscv32 -M virt -nographic -bios none -kernel $<
 
 $(BUILD)/riscv_test.elf: $(BUILD)/riscv_lowered.ll riscv/link.ld
 	$(LLC) -O0 -mtriple=riscv32-unknown-elf -mattr=+m -filetype=obj $< -o $(BUILD)/riscv_test.o
@@ -81,7 +81,7 @@ arm: $(BUILD)/arm_test.elf
 	@echo "========================================"
 	@echo "ARM Cortex-M3 (QEMU lm3s6965evb)"
 	@echo "========================================"
-	@timeout 5 qemu-system-arm -M lm3s6965evb -nographic -semihosting -kernel $< 2>/dev/null || true
+	qemu-system-arm -M lm3s6965evb -nographic -semihosting -kernel $<
 
 $(BUILD)/arm_test.elf: $(BUILD)/arm_lowered.ll arm/link.ld
 	$(LLC) -O0 -mtriple=thumbv7m-none-eabi -mcpu=cortex-m3 -filetype=obj $< -o $(BUILD)/arm_test.o
