@@ -103,7 +103,32 @@ help:
 	@echo "  all     - Build host, wasm, riscv"
 	@echo "  host    - Native platform"
 	@echo "  wasm    - WebAssembly (WASI)"
+	@echo "  wasm-br - WebAssembly with br workaround (fixes multi-suspend bug)"
 	@echo "  riscv   - RISC-V bare-metal"
 	@echo "  arm     - ARM Cortex-M3 (experimental)"
 	@echo "  test    - Run all tests"
 	@echo "  clean   - Remove build/"
+
+# =============================================================================
+# WebAssembly with br workaround (fixes LLVM WASM multi-suspend bug)
+# Uses coro_async_br.ll (icmp+br instead of switch) and patches unreachable->ret
+# =============================================================================
+wasm-br: $(BUILD)/wasm_br_patched.wasm
+	@echo "========================================"
+	@echo "WebAssembly with br workaround"
+	@echo "========================================"
+	@wasmtime $(BUILD)/wasm_br_patched.wasm || true
+	@echo ""
+
+$(BUILD)/wasm_br_merged.ll: coro_async_br.ll platform_wasm.ll | $(BUILD)
+	$(LLVM_LINK) $^ -S -o $@
+
+$(BUILD)/wasm_br_lowered.ll: $(BUILD)/wasm_br_merged.ll
+	$(OPT) $(CORO_PASSES) $< -S -o $@
+
+$(BUILD)/wasm_br_patched.ll: $(BUILD)/wasm_br_lowered.ll
+	@python3 -c "import re; c=open('$<').read(); c=re.sub(r'(suspend:\s*; preds = [^\n]*\n)\s*unreachable', r'\1  ret void', c); open('$@','w').write(c)"
+
+$(BUILD)/wasm_br_patched.wasm: $(BUILD)/wasm_br_patched.ll
+	$(LLC) -O0 -mtriple=wasm32-unknown-wasip1 -filetype=obj $< -o $(BUILD)/wasm_br_test.o
+	$(WASM_LD) --no-entry --export=_start $(BUILD)/wasm_br_test.o -o $@
